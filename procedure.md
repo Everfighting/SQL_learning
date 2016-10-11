@@ -21,21 +21,21 @@
 需要在数据库中有CREATE PROCEDURE权限，对在其中创建过程的架构有ALTER权限。
 
 创建过程：
-<codeblock>
+
+
 USE AdventureWorks2012;  
 GO  
 CREATE PROCEDURE HumanResources.uspGetEmployeesTest2   
     @LastName nvarchar(50),   
     @FirstName nvarchar(50)   
 AS   
-
     SET NOCOUNT ON;  
     SELECT FirstName, LastName, Department  
     FROM HumanResources.vEmployeeDepartmentHistory  
     WHERE FirstName = @FirstName AND LastName = @LastName  
     AND EndDate IS NULL;  
 GO  
-<endcodeblock>
+
 执行过程：
 
 EXECUTE HumanResources.uspGetEmployeesTest2 N'Ackerman', N'Pilar';  
