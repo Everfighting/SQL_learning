@@ -1,0 +1,94 @@
+用户登录在ASP项目中经常会使用到，相信很多朋友也都做过类似的系统，但使用存储过程来做验证朋友可能不多，那么我们就以它来做例子，写一个简单的用户登录验证的存储过程。
+
+QUOTE:
+CREATE PROC upUserLogin
+@strLoginName        NVARCHAR(20),
+@strLoginPwd        NVARCHAR(20),
+@blnReturn                BIT OUTPUT
+AS
+-- 定义一个临时用来保存密码的变量
+DECLARE @strPwd NVARCHAR(20)
+BEGIN
+        -- 从表中查询当前用户的密码，赋值给 @strPwd 变量，下面要对他进行比较
+        SELECT @strPwd=uLoginPwd FROM uUser WHERE uLoginName=@strLoginName
+
+        IF @strLoginPwd = @strPwd
+                BEGIN
+                        SET @blnReturn = 1
+                        -- 更新用户最后登录时间
+                        UPDATE uUser SET uLastLogin=GETDATE() WHERE uLoginName=@strLoginName
+                END
+        ELSE
+                SET @blnReturn = 0
+END
+
+　　用户登录的存储过程建立好了，现在在程序里试一下吧。注意，在一个区域内如果有多条语句时，必需使用BEGIN...END关键字。
+
+QUOTE:
+Dim adoComm
+'// 创建一个对象，我们用来调用存储过程
+Set adoComm = CreateObject("ADODB.Command")
+With adoComm
+        '// 设置连接，设 adoConn 为已经连接的 ADODB.Connection 对象
+        .ActiveConnection = adoConn
+        '// 类型为存储过程，adCmdStoredProc = 4
+        .CommandType = 4
+        '// 存储过程名称
+        .CommandText = "upUserLogin"
+        '// 设置登录名称
+        .Parameters.Item("@strLoginName").Value = "admin"
+        '// 设置登录密码
+        .Parameters.Item("@strLoginPwd").Value = "123456"
+        '// 执行存储过程
+        .Execute
+        
+        '// 判断是否登录成功
+        If .Parameters.Item("@blnReturn").Value = 1 Then
+                Response.Write "恭喜你，登录成功！"
+        Else
+                Response.Write "不是吧，好像错了哦。。。"
+        End If
+End With
+'// 释放对象
+Set adoComm = Nothing
+
+　　通过以上的步骤，简单用户登录验证过程也做完了，现在只要把它整合到程序中就可以实现简单的用户登录验证了，关于其他细节就由你自己来处理了。
+　　上面介绍的两个存储过程都是只返回一个值的，下面我们来看一个返回一个记录集的存储过程。
+
+QUOTE:
+CREATE PROC upGetUserInfos
+@intUserGroup        INT
+AS
+BEGIN
+        -- 从数据库中抽取符合条件的数据
+        SELECT uName,uGroup,uLastLogin FROM uUser WHERE uGroup=@intUserGroup
+        -- 插入一列合计
+        UNION
+        SELECT '合计人数:',COUNT(uGroup),NULL FROM uUser WHERE uGroup=@intUserGroup
+END
+
+　　现在我们来看一下ASP程序的调用。
+
+QUOTE:
+Dim adoComm
+Dim adoRt
+'// 创建一个对象，我们用来调用存储过程
+Set adoComm = CreateObject("ADODB.Command")
+Set adoRs = CreateObject("ADODB.Recordset")
+With adoComm
+        '// 设置连接，设 adoConn 为已经连接的 ADODB.Connection 对象
+        .ActiveConnection = adoConn
+        '// 类型为存储过程，adCmdStoredProc = 4
+        .CommandType = 4
+        '// 存储过程名称
+        .CommandText = "upGetUserInfos"
+        '// 设置用户组
+        .Parameters.Item("@intUserGroup").Value = 1
+        '// 执行存储过程，和以上几个例子不同，这里使用RecordSet的Open方法
+        adoRs.Open adoComm
+        '// 显示第一个值
+        Response.write adoRs.Fields(0).Value
+End With
+'// 释放对象
+Set adoRs = Nothing
+Set adoComm = Nothing
